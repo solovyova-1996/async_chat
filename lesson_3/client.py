@@ -16,23 +16,39 @@ from socket import *
 import sys
 
 
-def client():
+def get_port():
     try:
-        port = int(sys.argv[sys.argv.index('-p')+1])
+        return int(sys.argv[sys.argv.index('-p') + 1])
     except ValueError:
-        port = 7777
+        return 7777
+
+
+def get_addr():
     try:
-        addr = sys.argv[sys.argv.index('-a')+1]
+        return sys.argv[sys.argv.index('-a') + 1]
     except ValueError:
-        addr = "localhost"
+        return "localhost"
+
+
+def get_message():
     try:
-        message = sys.argv[sys.argv.index('-m')+1]
+        return sys.argv[sys.argv.index('-m') + 1]
     except ValueError:
-        message = "Пустое сообщение от клиента"
-    sock = socket(AF_INET, SOCK_STREAM)
+        return "Пустое сообщение от клиента"
+
+
+def send_messages(sock, message, addr, port):
     sock.connect((addr, port))
     sock.send(message.encode('utf-8'))
-    data = sock.recv(1000000)
+    return sock.recv(1000000)
+
+
+def client():
+    port = get_port()
+    addr = get_addr()
+    message = get_message()
+    sock = socket(AF_INET, SOCK_STREAM)
+    data = send_messages(sock, message, addr, port)
     print('Сообщение от сервера: ', data.decode('utf-8'), ', длиной ', len(data), 'байт')
     sock.close()
 

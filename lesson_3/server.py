@@ -10,15 +10,23 @@ from socket import *
 import sys
 
 
+def get_port():
+    try:
+        return int(sys.argv[sys.argv.index('-p') + 1])
+    except ValueError:
+        return 7777
+
+
+def get_addr():
+    try:
+        return sys.argv[sys.argv.index('-a') + 1]
+    except ValueError:
+        return ""
+
+
 def server_socket():
-    try:
-        port = int(sys.argv[sys.argv.index('-p')+1])
-    except IndexError:
-        port = 7777
-    try:
-        addr = sys.argv[sys.argv.index('-a')+1]
-    except IndexError:
-        addr = ""
+    port = get_port()
+    addr = get_addr()
     sock = socket(AF_INET, SOCK_STREAM)
     sock.bind((addr, port))
     sock.listen()
