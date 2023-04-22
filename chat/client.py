@@ -9,35 +9,39 @@
 # получить ответ сервера;
 # разобрать сообщение сервера;
 # параметры командной строки скрипта client.py <addr> [<port>]: addr — ip-адрес сервера; port — tcp-порт на сервере,
-# по умолчанию 3233.
+# по умолчанию 7776.
 
 
 from socket import *
 import argparse
-from log import log_client
+from log import log_client, log_client_deco
 
 parser = argparse.ArgumentParser()
 host = parser.add_argument('--host', type=str, default='localhost')
-port = parser.add_argument('--port', type=int, default=3233)
+port = parser.add_argument('--port', type=int, default=7776)
 message = parser.add_argument('--message', type=str, default='Пустое сообщение от клиента')
 args = parser.parse_args()
 
 
+@log_client_deco
 def get_port(args):
     log_client.info('вызов функции get_port')
     return args.port
 
 
+@log_client_deco
 def get_addr(args):
     log_client.info('вызов функции get_addr')
     return args.host
 
 
+@log_client_deco
 def get_message(args):
     log_client.info('вызов функции get_message')
     return args.message
 
 
+@log_client_deco
 def send_messages(sock, message, addr, port):
     sock.connect((addr, port))
     sock.send(message.encode('utf-8'))

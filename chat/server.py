@@ -3,25 +3,28 @@
 # формирует ответ клиенту;
 # отправляет ответ клиенту;
 # имеет параметры
-# командной строки: -p <port> — TCP-порт для работы (по умолчанию использует 1333); -a
+# командной строки: -p <port> — TCP-порт для работы (по умолчанию использует 7776); -a
 # <addr> — IP-адрес для прослушивания (по умолчанию слушает все доступные адреса).
 import argparse
 from socket import *
 
+from chat.log import log_server_deco
 from log import log_server
 
 parser = argparse.ArgumentParser()
 host = parser.add_argument('--host', type=str, default='')
-port = parser.add_argument('--port', type=int, default=1333)
+port = parser.add_argument('--port', type=int, default=7776)
 
 args = parser.parse_args()
 
 
+@log_server_deco
 def get_port(args):
     log_server.info('вызов функции get_port')
     return args.port
 
 
+@log_server_deco
 def get_addr(args):
     log_server.info('вызов функции get_addr')
     return args.host
