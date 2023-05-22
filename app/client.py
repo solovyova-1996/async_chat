@@ -88,6 +88,8 @@ class Client(metaclass=ClientVerifier):
                 self.create_message(sock, self.clent_name)
             elif command == 'help':
                 self.print_info_help()
+            # elif command == 'users':
+            #     print(ServerDatabase.users_list())
             elif command == 'exit':
                 message_exit = self.create_exit_message(self.clent_name)
                 send_mesages(sock, message_exit)

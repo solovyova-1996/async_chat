@@ -19,8 +19,8 @@ class ServerVerifier(type):
                         if i.argval not in attributes:
                             attributes.append(i.argval)
 
-        print(f'Функции(методы) использованные в классе Server: {methods}')
-        print(f'Атрибуты класса Server: {attributes}')
+        # print(f'Функции(методы) использованные в классе Server: {methods}')
+        # print(f'Атрибуты класса Server: {attributes}')
         if 'connect' in methods:
             raise TypeError('Недопустимый метод "connect" в серверном сокете')
         if not ('AF_INET' in attributes and 'SOCK_STREAM' in attributes):
@@ -49,8 +49,8 @@ class ClientVerifier(type):
                         if i.argval not in attributes:
                             attributes.append(i.argval)
 
-        print(f'Функции(методы) использованные в классе Client: {methods}')
-        print(f'Атрибуты класса Client: {attributes}')
+        # print(f'Функции(методы) использованные в классе Client: {methods}')
+        # print(f'Атрибуты класса Client: {attributes}')
 
         if not ('AF_INET' in attributes and 'SOCK_STREAM' in attributes):
             raise TypeError(
