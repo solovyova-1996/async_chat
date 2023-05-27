@@ -1,4 +1,4 @@
-from client import create_greetings, handler_response_from_server
+from client1 import create_greetings, handler_response_from_server
 from general.variables import ACTION, TIME, GREETINGS, ACCOUNT_NAME, USER, \
     GUEST, RESPONSE, ERROR
 

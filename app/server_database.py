@@ -1,6 +1,6 @@
 from sqlalchemy import Table, Column, create_engine, MetaData, Integer, String, \
     DateTime, ForeignKey
-from sqlalchemy.orm import mapper, Session
+from sqlalchemy.orm import mapper, Session, sessionmaker
 from datetime import datetime
 
 database_name = 'sqlite:///server_database.db3'
@@ -39,14 +39,28 @@ class ServerDatabase:
         def __repr__(self):
             return f'< LoginHistory({self.user_name},{self.ip}:{self.port},{self.date_time})>'
 
-    def __init__(self):
+    class UsersContacts(object):
+        def __init__(self, user, contact):
+            self.user = user
+            self.contact = contact
+            self.id = None
+
+    class UsersHistory(object):
+        def __init__(self, user):
+            self.user = user
+            self.sent = 0
+            self.accepted = 0
+
+    def __init__(self, path):
         # создание базы данных
-        self.database = create_engine(database_name, echo=False,
-                                      pool_recycle=7200)
+        self.database = create_engine(f'sqlite:///{path}', echo=False,
+                                      pool_recycle=7200,
+                                      connect_args={'check_same_thread': False})
         # для создания таблиц типа migrate , makemigrations
         self.metadata = MetaData()
         # создание сессии для внесения изменений в бд
-        self.session = Session(self.database)
+        Session = sessionmaker(bind=self.database)
+        self.session = Session()
         # создание таблиц
         self.users_table = Table('users', self.metadata,
                                  Column('id', Integer, primary_key=True),
@@ -69,15 +83,34 @@ class ServerDatabase:
                                               Column('ip', String),
                                               Column('port', Integer),
                                               Column('date_time', DateTime))
-
+        self.user_contacts_table = Table('user-contacts', self.metadata,
+                                         Column('id', Integer,
+                                                primary_key=True),
+                                         Column('user', ForeignKey('users.id')),
+                                         Column('contact',
+                                                ForeignKey('users.id')))
+        self.user_history_table = Table('users-history', self.metadata,
+                                        Column('id', Integer, primary_key=True),
+                                        Column('user', ForeignKey('users.id')),
+                                        Column('sent', Integer),
+                                        Column('accepted', Integer))
         # создание всех таблиц
         self.metadata.create_all(self.database)
+
         # соединение таблицы и класса для ее заполнения
         self.mapper_user = mapper(self.Users, self.users_table)
         self.mapper_user_active = mapper(self.UsersActive,
                                          self.active_users_table)
         self.mapper_login_history = mapper(self.LoginHistory,
                                            self.history_login_user_table)
+        self.mapper_user_contacts = mapper(self.UsersContacts,
+                                           self.user_contacts_table)
+        self.mapper_users_history = mapper(self.UsersHistory,
+                                           self.user_history_table)
+
+        #   удаление записей в таблице активных пользователей(так как необходимо соблюдать уникальность записей)
+        self.session.query(self.UsersActive).delete()
+        self.session.commit()
 
     def user_login(self, name_user, ip, port):
         # print(f'Пользователь: {name_user} ({ip}:{port}) - вошёл в систему')
@@ -86,12 +119,14 @@ class ServerDatabase:
 
         if result.count():
             user = result.first()
-            user.last_login = datetime.now()
-            self.session.add(user)
+            user.last_login = datetime.now()  # self.session.add(user)
         else:
             user = self.Users(name_user)
             self.session.add(user)
-        self.session.commit()
+            self.session.commit()
+            user_in_history = self.UsersHistory(user.id)
+            self.session.add(user_in_history)
+
         new_active_user = self.UsersActive(user.id, ip, port, datetime.now())
         self.session.add(new_active_user)
         new_login_history = self.LoginHistory(user.id, ip, port, datetime.now())
@@ -124,6 +159,62 @@ class ServerDatabase:
             return login_history_lst.filter(self.Users.name == username).all()
         return login_history_lst.all()
 
+    def handler_message(self, sender, recipient):
+        # id отправителя
+        sender = self.session.query(self.Users).filter_by(
+            name=sender).first().id
+        # id получателя
+        recipient = self.session.query(self.Users).filter_by(
+            name=recipient).first().id
+        # print(sender)
+        # print(recipient)
+        sender_value = self.session.query(self.UsersHistory).filter_by(
+            user=sender).first()
+        sender_value.sent += 1
+        recipient_value = self.session.query(self.UsersHistory).filter_by(
+            user=recipient).first()
+        recipient_value.accepted += 1
+        self.session.commit()
+
+    def add_contact(self, user, contact):
+        # Функция добавляет в таблицу контактов запись
+        # (осуществляется проверка на наличие подобной записи в таблице, если запись есть запись пропускается)
+        user = self.session.query(self.Users).filter_by(name=user).firtst()
+        contact = self.session.query(self.Users).filter_by(
+            name=contact).firtst()
+        if not contact or self.session.query(self.UsersContacts).filter_by(
+                name=user.id, contact=contact.id).count():
+            return
+        contact_new = self.UsersContacts(user.id, contact.id)
+        self.session.add(contact_new)
+        self.session.commit()
+
+    def remove_contacts(self, user, contact):
+        user = self.session.query(self.Users).filter_by(name=user).firtst()
+        contact = self.session.query(self.Users).filter_by(
+            name=contact).firtst()
+        if not contact:
+            return
+        print(self.session.query(self.UsersContacts).filter(
+            self.UsersContacts.user == user.id,
+            self.UsersContacts.contact == contact.id).delete())
+        self.session.commit()
+
+    def message_history(self):
+        query = self.session.query(self.Users.name, self.Users.last_login,
+                                   self.UsersHistory.sent,
+                                   self.UsersHistory.accepted).join(self.Users)
+
+        return query.all()
+
+    def get_contacts(self, username):
+        user = self.session.query(self.Users).filter_by(name=username).one()
+        query = self.session.query(self.UsersContacts,
+                                   self.Users.name).filter_by(
+            user=user.id).join(self.Users,
+                               self.UsersContacts.contacts == self.Users.id)
+        return [contact[1] for contact in query.all()]
+
 
 if __name__ == '__main__':
     server = ServerDatabase()
@@ -135,47 +226,5 @@ if __name__ == '__main__':
     print(server.active_users_list())
     server.user_logout('user1')
     print(server.active_users_list())
-
-
-
-
-
-
-
-
-
-####################пример для себя##################
-# имя базы данных
-# database_name='sqlite:///server_database.db3'
-# # создание базы данных
-# database = create_engine(database_name,echo=False,pool_recycle=7200)
-# # создание сессии для работы с базой данных, чтобы можно было сохранять данные в таблицы
-# session = Session(database)
-#
-# metadata = MetaData() # для создания таблиц типа migrate , makemigrations
-# # создание таблицы
-# users_table = Table('users',metadata,
-#     Column('id',Integer,primary_key=True),
-#     Column('name',String),
-#     Column('last_login',DateTime)
-# )
-# # класс для внесения данных в таблицу
-# class User(object):
-#     def __init__(self,name):
-#         self.id = None
-#         self.name = name
-#         self.last_login = datetime.now()
-#     def __repr__(self):
-#         return f'< User({self.id},{self.name},{self.last_login}) >'
-# # создание всех таблиц
-# metadata.create_all(database)
-# # соединение таблицы и класса для ее заполнения
-# mapper_user=mapper(User,users_table)
-# # создание пользователя
-# user_1 = User('даша')
-# # добавление пользователя в таблицу
-# session.add(user_1)
-# # сохранение данных в базу
-# session.commit()
-# print(session.query(User).all())
-#
+    server.handler_message('user', 'user2')
+    print(server.message_history())
