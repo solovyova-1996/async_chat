@@ -6,6 +6,7 @@
 # в экземпляр дескриптора при запуске сервера.
 import sys
 from logging import getLogger
+from ipaddress import ip_address
 
 from config import server_log_config
 
@@ -23,11 +24,23 @@ class Port:
                 f'Номер порта не удовлетворяет условию -от 1024 до 65535.Переданный порт- {value}.Process finished with exit code 1')
             sys.exit(1)
         instance.__dict__[self.name] = value
+class Host:
+    def __set_name__(self, owner, name):
+        self.name = name
+    def __set__(self,instance,value):
+        try:
+            host = ip_address(value)
+        except:
+            print('Неверное имя хоста')
+            log.critical(f'Неверное имя хоста - {value}')
+            sys.exit(1)
+        instance.__dict__[self.name] = value
+
 
 if __name__ == '__main__':
 
     class NewCl:
-        port = ServerPort()
+        port = Port()
 
     a = NewCl()
     a.port = 89999
