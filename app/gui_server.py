@@ -8,7 +8,7 @@ import sys
 
 def gui_create_model_tabel(database):
     active_users_list = database.active_users_list()
-    print(active_users_list)
+    # print(active_users_list)
     model_table = QStandardItemModel()
     model_table.setHorizontalHeaderLabels(
         ['Пользователь', 'IP-адрес', 'Порт', 'Время подключения', ])

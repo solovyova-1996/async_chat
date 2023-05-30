@@ -179,11 +179,11 @@ class ServerDatabase:
     def add_contact(self, user, contact):
         # Функция добавляет в таблицу контактов запись
         # (осуществляется проверка на наличие подобной записи в таблице, если запись есть запись пропускается)
-        user = self.session.query(self.Users).filter_by(name=user).firtst()
+        user = self.session.query(self.Users).filter_by(name=user).first()
         contact = self.session.query(self.Users).filter_by(
-            name=contact).firtst()
+            name=contact).first()
         if not contact or self.session.query(self.UsersContacts).filter_by(
-                name=user.id, contact=contact.id).count():
+                user=user.id, contact=contact.id).count():
             return
         contact_new = self.UsersContacts(user.id, contact.id)
         self.session.add(contact_new)
@@ -212,7 +212,7 @@ class ServerDatabase:
         query = self.session.query(self.UsersContacts,
                                    self.Users.name).filter_by(
             user=user.id).join(self.Users,
-                               self.UsersContacts.contacts == self.Users.id)
+                               self.UsersContacts.contact == self.Users.id)
         return [contact[1] for contact in query.all()]
 
 
